@@ -4,7 +4,7 @@ pip install mnemonic
 ```
 ```bash
 npm init -y
-npm install axios web3 @solana/web3.js bip39 @ethersproject/hdnode dotenv
+npm install axios web3 @solana/web3.js bip39 @ethersproject/hdnode dotenv ethers
 ```
 run
 ```bash
