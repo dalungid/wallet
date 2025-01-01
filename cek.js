@@ -1,11 +1,16 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import axios from 'axios';
 import { Wallet } from 'ethers';
 import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 import dotenv from 'dotenv';
-import pLimit from 'p-limit';  // Perubahan di sini untuk p-limit
+import pLimit from 'p-limit'; // Perubahan di sini untuk p-limit
 
 dotenv.config();
+
+// Mendapatkan path direktori dari import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Membaca mnemonics dari file evm.json
 const mnemonicsFile = join(__dirname, 'evm.json');
