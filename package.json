@@ -1,0 +1,22 @@
+{
+  "name": "wallet",
+  "version": "1.0.0",
+  "description": "install ```bash pip install mnemonic ``` ```bash npm init -y npm install axios web3 @solana/web3.js b>  ",
+  "main": "cek.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ethersproject/hdnode": "^5.7.0",
+    "@solana/web3.js": "^1.98.0",
+    "axios": "^1.7.9",
+    "bip39": "^3.1.0",
+    "dotenv": "^16.4.7",
+    "p-limit": "^6.2.0",
+    "web3": "^4.16.0"
+  },
+  "type": "module"
+}
