@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import axios from 'axios';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js'; // Import Solana SDK
-import { ethers } from 'ethers'; // Import ethers.js untuk Ethereum dan BSC
+import { Connection, PublicKey } from '@solana/web3.js'; // Import Solana SDK
+import { ethers } from 'ethers'; // Import ethers.js untuk Ethereum dan lainnya
 
 // Menyusun path ke evm.json dengan menggunakan import.meta.url
 const __dirname = dirname(new URL(import.meta.url).pathname);
@@ -24,31 +24,32 @@ const apiKeys = {
   eth: 'XYT8F3HGNSR9E8SES984P26TG1RPET1CHD',
   bsc: 'XSH4MTS8NBZU4ZRE85YV29K7CDXVVYCAAH',
   polygon: 'P4FSB7PA6WABXFNTYBXADT7C71YJIEGP7I',
-  sol: 'your-sol-api-key',  // Ganti dengan API key Solana yang valid
   arb: '7QXIKYWD29Z1TZR7ANSCBF1MBCDWG9RIJP',
   base: 'X6KQDS4DJYNH7D65RRHXV3IS945TADEPKJ',
+  sol: 'your-sol-api-key',  // Ganti dengan API key Solana yang valid
 };
 
-// Fungsi untuk mengubah mnemonic menjadi address (untuk Ethereum, BSC, Polygon, dll)
+// Fungsi untuk mendapatkan address dari mnemonic
 const getAddressFromMnemonic = (mnemonic, chain) => {
-    switch (chain) {
-      case 'eth':
-      case 'bsc':
-      case 'polygon':
-      case 'arb':
-      case 'base':
-        // Pastikan Anda mengimpor ethers dengan benar, dan pastikan ethers sudah di-install
-        const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-        return wallet.address;  // Menghasilkan address dari mnemonic
-      default:
-        return mnemonic;  // Untuk Solana atau chain lainnya
-    }
-  };
+  switch (chain) {
+    case 'eth':
+    case 'bsc':
+    case 'polygon':
+    case 'arb':
+    case 'base':
+      // Menggunakan ethers.js untuk mendapatkan address
+      const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+      return wallet.address;  // Menghasilkan address dari mnemonic
+    default:
+      return mnemonic;  // Untuk Solana atau chain lainnya
+  }
+};
 
-// Fungsi untuk mendapatkan saldo dari API (misalnya Ethereum, Solana, dll)
+// Fungsi untuk mendapatkan saldo dari API (misalnya Ethereum)
 const getBalanceFromAPI = async (mnemonic, chain) => {
+  const address = getAddressFromMnemonic(mnemonic, chain);
   let apiUrl;
-  const address = getAddressFromMnemonic(mnemonic, chain);  // Mendapatkan address dari mnemonic
+  let params = { address: address };  // Asumsi mnemonic sudah menjadi alamat wallet
 
   switch (chain) {
     case 'eth':
@@ -69,9 +70,7 @@ const getBalanceFromAPI = async (mnemonic, chain) => {
     case 'sol':  // Menambahkan kasus untuk Solana
       const solConnection = new Connection('https://api.mainnet-beta.solana.com'); // Endpoint RPC Solana
       try {
-        // Menggunakan mnemonic untuk menghasilkan Keypair
-        const keypair = Keypair.fromMnemonic(mnemonic);  // Menghasilkan Keypair dari mnemonic
-        const publicKey = keypair.publicKey; // Mendapatkan public key dari Keypair
+        const publicKey = new PublicKey(address); // Menggunakan address Solana
         const balance = await solConnection.getBalance(publicKey);
         return balance / 1000000000;  // Mengonversi saldo dari lamports ke SOL (1 SOL = 10^9 lamports)
       } catch (error) {
@@ -84,7 +83,7 @@ const getBalanceFromAPI = async (mnemonic, chain) => {
   }
 
   try {
-    const response = await axios.get(apiUrl);
+    const response = await axios.get(apiUrl, { params });
     return response.data.result || '0';
   } catch (error) {
     console.error(`Error fetching balance for ${chain}:`, error);
