@@ -31,18 +31,19 @@ const apiKeys = {
 
 // Fungsi untuk mengubah mnemonic menjadi address (untuk Ethereum, BSC, Polygon, dll)
 const getAddressFromMnemonic = (mnemonic, chain) => {
-  switch (chain) {
-    case 'eth':
-    case 'bsc':
-    case 'polygon':
-    case 'arb':
-    case 'base':
-      const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-      return wallet.address;  // Menghasilkan address dari mnemonic
-    default:
-      return mnemonic;  // Untuk Solana atau chain lainnya
-  }
-};
+    switch (chain) {
+      case 'eth':
+      case 'bsc':
+      case 'polygon':
+      case 'arb':
+      case 'base':
+        // Pastikan Anda mengimpor ethers dengan benar, dan pastikan ethers sudah di-install
+        const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+        return wallet.address;  // Menghasilkan address dari mnemonic
+      default:
+        return mnemonic;  // Untuk Solana atau chain lainnya
+    }
+  };
 
 // Fungsi untuk mendapatkan saldo dari API (misalnya Ethereum, Solana, dll)
 const getBalanceFromAPI = async (mnemonic, chain) => {
