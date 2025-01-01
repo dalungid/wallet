@@ -1,115 +1,119 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
 import axios from 'axios';
-import { Wallet } from 'ethers';
-import { readFileSync, writeFileSync } from 'fs';
-import dotenv from 'dotenv';
-import pLimit from 'p-limit'; // Perubahan di sini untuk p-limit
+import { Connection, PublicKey } from '@solana/web3.js'; // Import Solana SDK
 
-dotenv.config();
-
-// Mendapatkan path direktori dari import.meta.url
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Membaca mnemonics dari file evm.json
+// Menyusun path ke evm.json dengan menggunakan import.meta.url
+const __dirname = dirname(new URL(import.meta.url).pathname);
 const mnemonicsFile = join(__dirname, 'evm.json');
+
+// Membaca dan mem-parsing file JSON
 const mnemonics = JSON.parse(readFileSync(mnemonicsFile, 'utf8'));
 
-// API untuk berbagai blockchain
-const APIs = {
-  eth: 'https://api.etherscan.io/api?module=account&action=balance&address=',
-  bnb: 'https://api.bscscan.com/api?module=account&action=balance&address=',
-  poly: 'https://api.polygonscan.com/api?module=account&action=balance&address=',
-  sol: 'https://api.solscan.io/account?address=',
-  arb: 'https://api.arbiscan.io/api?module=account&action=balance&address=',
-  base: 'https://api.base.org/api?module=account&action=balance&address=',
+// Verifikasi apakah mnemonics adalah array
+if (!Array.isArray(mnemonics)) {
+  console.error('Mnemonics data is not an array');
+  process.exit(1);
+}
+
+console.log('Mnemonics:', mnemonics); // Verifikasi isi mnemonics
+
+// API Keys untuk berbagai jaringan
+const apiKeys = {
+  eth: 'XYT8F3HGNSR9E8SES984P26TG1RPET1CHD',
+  bsc: 'XSH4MTS8NBZU4ZRE85YV29K7CDXVVYCAAH',
+  polygon: 'P4FSB7PA6WABXFNTYBXADT7C71YJIEGP7I',
+  sol: 'your-sol-api-key',  // Ganti dengan API key Solana yang valid
+  arb: '7QXIKYWD29Z1TZR7ANSCBF1MBCDWG9RIJP',
+  base: 'X6KQDS4DJYNH7D65RRHXV3IS945TADEPKJ',
 };
 
-const checkBalance = async (mnemonic) => {
+// Fungsi untuk mendapatkan saldo dari API (misalnya Ethereum)
+const getBalanceFromAPI = async (mnemonic, chain) => {
+  let apiUrl;
+  let params = { address: mnemonic };  // Asumsi mnemonic adalah alamat wallet
+
+  switch (chain) {
+    case 'eth':
+      apiUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${mnemonic}&tag=latest&apikey=${apiKeys.eth}`;
+      break;
+    case 'bsc':
+      apiUrl = `https://api.bscscan.com/api?module=account&action=balance&address=${mnemonic}&tag=latest&apikey=${apiKeys.bsc}`;
+      break;
+    case 'polygon':
+      apiUrl = `https://api.polygonscan.com/api?module=account&action=balance&address=${mnemonic}&tag=latest&apikey=${apiKeys.polygon}`;
+      break;
+    case 'arb':
+      apiUrl = `https://api.arbiscan.io/api?module=account&action=balance&address=${mnemonic}&tag=latest&apikey=${apiKeys.arb}`;
+      break;
+    case 'base':
+      apiUrl = `https://api.basescan.org/api?module=account&action=balance&address=${mnemonic}&tag=latest&apikey=${apiKeys.base}`;
+      break;
+    case 'sol':  // Menambahkan kasus untuk Solana
+      const solConnection = new Connection('https://api.mainnet-beta.solana.com'); // Endpoint RPC Solana
+      try {
+        const publicKey = new PublicKey(mnemonic); // Menggunakan mnemonic sebagai public key
+        const balance = await solConnection.getBalance(publicKey);
+        return balance / 1000000000;  // Mengonversi saldo dari lamports ke SOL (1 SOL = 10^9 lamports)
+      } catch (error) {
+        console.error(`Error fetching Solana balance for ${mnemonic}:`, error);
+        return '0';
+      }
+    default:
+      console.error('Chain not supported');
+      return '0';
+  }
+
   try {
-    const wallet = Wallet.fromMnemonic(mnemonic);
-    const address = wallet.address;
-
-    const balances = {};
-
-    // Memeriksa saldo untuk Ethereum (ETH)
-    const ethBalance = await axios.get(`${APIs.eth}${address}`);
-    if (ethBalance.data.result !== '0') {
-      balances.eth = parseFloat(ethBalance.data.result) / 10 ** 18;
-    }
-
-    // Memeriksa saldo untuk Binance Smart Chain (BNB)
-    const bnbBalance = await axios.get(`${APIs.bnb}${address}`);
-    if (bnbBalance.data.result !== '0') {
-      balances.bnb = parseFloat(bnbBalance.data.result) / 10 ** 18;
-    }
-
-    // Memeriksa saldo untuk Polygon (POLY)
-    const polyBalance = await axios.get(`${APIs.poly}${address}`);
-    if (polyBalance.data.result !== '0') {
-      balances.poly = parseFloat(polyBalance.data.result) / 10 ** 18;
-    }
-
-    // Memeriksa saldo untuk Solana (SOL)
-    const solBalance = await axios.get(`${APIs.sol}${address}`);
-    if (solBalance.data.data) {
-      balances.sol = parseFloat(solBalance.data.data.balance) / 10 ** 9;
-    }
-
-    // Memeriksa saldo untuk Arbitrum (ARB)
-    const arbBalance = await axios.get(`${APIs.arb}${address}`);
-    if (arbBalance.data.result !== '0') {
-      balances.arb = parseFloat(arbBalance.data.result) / 10 ** 18;
-    }
-
-    // Memeriksa saldo untuk Base (BASE)
-    const baseBalance = await axios.get(`${APIs.base}${address}`);
-    if (baseBalance.data.result !== '0') {
-      balances.base = parseFloat(baseBalance.data.result) / 10 ** 18;
-    }
-
-    return { address, balances };
+    const response = await axios.get(apiUrl, { params });
+    return response.data.result || '0';
   } catch (error) {
-    console.error(`Error checking balance for mnemonic: ${mnemonic}`, error);
-    return null;
+    console.error(`Error fetching balance for ${chain}:`, error);
+    return '0';
   }
 };
 
-const saveResults = (results) => {
-  const outputFile = join(__dirname, 'res.json');
-  let data = {};
-
-  try {
-    data = JSON.parse(readFileSync(outputFile, 'utf8'));
-  } catch (err) {
-    console.log('No previous results found, starting fresh.');
-  }
-
-  results.forEach(({ address, balances }) => {
-    if (Object.keys(balances).length > 0) {
-      data[address] = {
-        mnemonic: address,
-        saldo: balances,
-      };
-    }
-  });
-
-  writeFileSync(outputFile, JSON.stringify(data, null, 2));
-  console.log('Results saved to res.json');
-};
-
-const checkAllWallets = async () => {
-  const results = [];
+// Fungsi untuk menyimpan hasil ke file res.json
+const saveResults = async (mnemonics) => {
+  const results = {};
 
   for (let mnemonic of mnemonics) {
-    const result = await checkBalance(mnemonic);
-    if (result) {
-      results.push(result);
+    const balances = {};
+
+    // Periksa saldo untuk setiap jaringan
+    const ethBalance = await getBalanceFromAPI(mnemonic, 'eth');
+    if (ethBalance !== '0') balances.eth = ethBalance;
+
+    const bnbBalance = await getBalanceFromAPI(mnemonic, 'bsc');
+    if (bnbBalance !== '0') balances.bnb = bnbBalance;
+
+    const polyBalance = await getBalanceFromAPI(mnemonic, 'polygon');
+    if (polyBalance !== '0') balances.poly = polyBalance;
+
+    const arbBalance = await getBalanceFromAPI(mnemonic, 'arb');
+    if (arbBalance !== '0') balances.arb = arbBalance;
+
+    const baseBalance = await getBalanceFromAPI(mnemonic, 'base');
+    if (baseBalance !== '0') balances.base = baseBalance;
+
+    const solBalance = await getBalanceFromAPI(mnemonic, 'sol');
+    if (solBalance !== '0') balances.sol = solBalance;  // Menambahkan Solana
+
+    // Simpan hasil hanya jika ada saldo yang ditemukan
+    if (Object.keys(balances).length > 0) {
+      results[mnemonic] = { saldo: balances };
     }
   }
 
-  saveResults(results);
+  // Simpan hasil ke file JSON
+  try {
+    const fs = require('fs');
+    fs.writeFileSync('res.json', JSON.stringify(results, null, 2));
+    console.log('Hasil disimpan ke res.json');
+  } catch (error) {
+    console.error('Error writing results to file:', error);
+  }
 };
 
-checkAllWallets();
+// Jalankan fungsi untuk memeriksa saldo semua wallet dan simpan hasilnya
+saveResults(mnemonics);
