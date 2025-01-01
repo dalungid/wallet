@@ -3,6 +3,7 @@ import { Wallet } from 'ethers';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import dotenv from 'dotenv';
+import pLimit from 'p-limit';  // Perubahan di sini untuk p-limit
 
 dotenv.config();
 
