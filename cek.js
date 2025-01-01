@@ -27,6 +27,9 @@ const apiKeys = {
   base: 'X6KQDS4DJYNH7D65RRHXV3IS945TADEPKJ',
 };
 
+// Fungsi untuk memberikan jeda
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Fungsi untuk mendapatkan address berdasarkan mnemonic
 const getAddressFromMnemonic = (mnemonic, chain) => {
   if (chain === 'sol') {
@@ -34,6 +37,7 @@ const getAddressFromMnemonic = (mnemonic, chain) => {
     return null;
   } else {
     const wallet = ethers.Wallet.fromMnemonic(mnemonic);  // Gunakan ethers.js untuk Ethereum, BSC, Polygon, dsb.
+    console.log(`Alamat wallet untuk mnemonic: ${wallet.address}`);
     return wallet.address;
   }
 };
@@ -68,8 +72,11 @@ const getBalanceFromAPI = async (mnemonic, chain) => {
   }
 
   try {
+    console.log(`Mengambil saldo dari ${chain} untuk alamat: ${address}`);
     const response = await axios.get(apiUrl, { params });
-    return response.data.result || '0';
+    const balance = response.data.result || '0';
+    console.log(`Saldo untuk ${chain} (${address}): ${balance}`);
+    return balance;
   } catch (error) {
     console.error(`Error fetching balance for ${chain}:`, error);
     return '0';
@@ -80,8 +87,11 @@ const getBalanceFromAPI = async (mnemonic, chain) => {
 const saveResults = async (mnemonics) => {
   const results = {};
 
-  for (let mnemonic of mnemonics) {
+  for (let i = 0; i < mnemonics.length; i++) {
+    const mnemonic = mnemonics[i];
     const balances = {};
+
+    console.log(`Memeriksa saldo untuk mnemonik ${i + 1}: ${mnemonic}`);  // Menambahkan log proses di terminal
 
     // Periksa saldo untuk setiap jaringan
     const ethBalance = await getBalanceFromAPI(mnemonic, 'eth');
@@ -102,6 +112,12 @@ const saveResults = async (mnemonics) => {
     // Simpan hasil hanya jika ada saldo yang ditemukan
     if (Object.keys(balances).length > 0) {
       results[mnemonic] = { saldo: balances };
+    }
+
+    // Beri jeda setiap 5 mnemonik dan tampilkan log
+    if ((i + 1) % 5 === 0) {
+      console.log(`Menunggu... Proses 5 mnemonik selesai.`);
+      await sleep(1000);  // 1 detik jeda
     }
   }
 
