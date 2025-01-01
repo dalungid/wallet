@@ -1,8 +1,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import axios from 'axios';
-import { Connection, PublicKey } from '@solana/web3.js'; // Import Solana SDK
-import { ethers } from 'ethers';  // Import ethers untuk Ethereum dan lainnya
+import { ethers } from 'ethers';  // Pastikan ethers.js terimpor
 
 // Menyusun path ke evm.json dengan menggunakan import.meta.url
 const __dirname = dirname(new URL(import.meta.url).pathname);
@@ -24,44 +23,28 @@ const apiKeys = {
   eth: 'XYT8F3HGNSR9E8SES984P26TG1RPET1CHD',
   bsc: 'XSH4MTS8NBZU4ZRE85YV29K7CDXVVYCAAH',
   polygon: 'P4FSB7PA6WABXFNTYBXADT7C71YJIEGP7I',
-  sol: 'your-sol-api-key',  // Ganti dengan API key Solana yang valid
   arb: '7QXIKYWD29Z1TZR7ANSCBF1MBCDWG9RIJP',
   base: 'X6KQDS4DJYNH7D65RRHXV3IS945TADEPKJ',
 };
 
-// Fungsi untuk mengonversi mnemonic menjadi address untuk Ethereum, Binance Smart Chain, Polygon, Arbitrum, dan Base
+// Fungsi untuk mendapatkan address berdasarkan mnemonic
 const getAddressFromMnemonic = (mnemonic, chain) => {
-  switch (chain) {
-    case 'eth':
-    case 'bsc':
-    case 'polygon':
-    case 'arb':
-    case 'base':
-      const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-      return wallet.address;
-    case 'sol':
-      // Untuk Solana, kita akan menggunakan PublicKey Solana yang valid
-      try {
-        const keypair = ethers.utils.HDNode.fromMnemonic(mnemonic);  // Menggunakan ethers.js untuk mendapatkan private key
-        const publicKey = new PublicKey(keypair.address);  // Konversi menjadi public key Solana
-        return publicKey.toBase58();  // Mengembalikan Base58 encoded public key untuk Solana
-      } catch (error) {
-        console.error('Error converting Solana mnemonic to address:', error);
-        return null;
-      }
-    default:
-      console.error('Unsupported chain type');
-      return null;
+  if (chain === 'sol') {
+    console.error('Solana tidak didukung dalam kode ini.');
+    return null;
+  } else {
+    const wallet = ethers.Wallet.fromMnemonic(mnemonic);  // Gunakan ethers.js untuk Ethereum, BSC, Polygon, dsb.
+    return wallet.address;
   }
 };
 
 // Fungsi untuk mendapatkan saldo dari API
 const getBalanceFromAPI = async (mnemonic, chain) => {
   const address = getAddressFromMnemonic(mnemonic, chain);  // Mendapatkan address untuk blockchain tertentu
-  if (!address) return '0';  // Jika address tidak valid, return '0'
+  if (!address) return '0';  // Jika address tidak valid, kembalikan 0
 
   let apiUrl;
-  let params = { address: address };
+  let params = { address: address };  // Asumsi mnemonic sudah menjadi alamat wallet
 
   switch (chain) {
     case 'eth':
@@ -79,16 +62,6 @@ const getBalanceFromAPI = async (mnemonic, chain) => {
     case 'base':
       apiUrl = `https://api.basescan.org/api?module=account&action=balance&address=${address}&tag=latest&apikey=${apiKeys.base}`;
       break;
-    case 'sol':  // Menambahkan kasus untuk Solana
-      const solConnection = new Connection('https://api.mainnet-beta.solana.com'); // Endpoint RPC Solana
-      try {
-        const publicKey = new PublicKey(address);  // Menggunakan address Solana yang sudah benar
-        const balance = await solConnection.getBalance(publicKey);
-        return balance / 1000000000;  // Mengonversi saldo dari lamports ke SOL (1 SOL = 10^9 lamports)
-      } catch (error) {
-        console.error(`Error fetching Solana balance for ${address}:`, error);
-        return '0';
-      }
     default:
       console.error('Chain not supported');
       return '0';
@@ -125,9 +98,6 @@ const saveResults = async (mnemonics) => {
 
     const baseBalance = await getBalanceFromAPI(mnemonic, 'base');
     if (baseBalance !== '0') balances.base = baseBalance;
-
-    const solBalance = await getBalanceFromAPI(mnemonic, 'sol');
-    if (solBalance !== '0') balances.sol = solBalance;  // Menambahkan Solana
 
     // Simpan hasil hanya jika ada saldo yang ditemukan
     if (Object.keys(balances).length > 0) {
