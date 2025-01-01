@@ -1,8 +1,9 @@
-﻿install pip
+﻿install
 ```bash
 pip install mnemonic
 ```
 ```bash
+npm init -y
 npm install axios web3 @solana/web3.js bip39 @ethersproject/hdnode dotenv
 ```
 run
